@@ -1,0 +1,75 @@
+#+TITLE: Introduction to Pandas
+#+AUTHOR: Rohit Jain
+#+EMAIL: rohit.jain@guavus.com
+#+BABEL: :cache yes :results output :exports both :tangle yes
+
+* Introduction to Pandas
+
+Pandas is a tool for working with data effectively within Python.
+
+** Installation
+
+It depends on a current version of numpy, so one'll need that
+installed. It can be installed on mac simply by the following command
+
+pip install pandas
+
+After the above, fire up an instance of the python repl and verify that
+pandas is importable by trying the following:
+
+#+BEGIN_SRC python
+import pandas
+#+END_SRC
+
+#+RESULTS:
+: None
+
+If the above import fails, then it might be possible that an old version
+of numpy is installed on the system. In that case, upgrade the required
+dependencies. The error message will give a hint about which dependency
+is causing issues.
+
+** Motivation
+
+Working with structured data and extracting stats like counts, top
+counts, etc can be hairy in vanilla python. Libs like defaultdict,
+Counters etc can make it a bit easier, but still the focus remains a bit
+on how to get something done instead of actually getting it done.
+
+** Dataframes
+
+Pandas has a bunch of nice abstractions that help with that. Enter
+Dataframes, which essentially represent some tabular data. Say we have
+the following bunch of dicts in an array, essentially a list of records
+and we want to create a table out of these.
+
+#+BEGIN_SRC python :session intro
+records = [{'f1':'asdf', 'f2':12}, {'f1':'qwer', 'f2':23}]
+
+from pandas import DataFrame, Series
+import pandas as pd; import numpy as np
+
+frame = DataFrame(records)
+frame
+#+END_SRC
+
+#+RESULTS:
+:      f1  f2
+: 0  asdf  12
+: 1  qwer  23
+
+We can now access the elements as following:
+
+#+BEGIN_SRC python :session intro
+frame['f1']
+#+END_SRC
+
+#+RESULTS:
+: 0    asdf
+: 1    qwer
+: Name: f1, dtype: object
+
+The output of frame is usually a summary view for large dataframe
+objects. When accessing a column from a dataframe, the output is a
+series object. It has a method "value_counts" that gives us the counts
+of the values of the column in sorted order.
