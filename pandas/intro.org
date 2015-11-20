@@ -3,14 +3,19 @@
 #+EMAIL: rohit.jain@guavus.com
 #+BABEL: :cache yes :results output :exports both :tangle yes
 
-Pandas is a tool for working with data effectively within Python.
+Pandas is a tool for working with data effectively within Python. This
+file is an Introduction to the library. Basically I am updating this as
+I learn along. This is a org-mode doc with org-babel. Hence, it can be
+executed within emacs. If you check out the raw file, it should contain
+the results of most of the source block executions.
 
 * Installation
 
 It depends on a current version of numpy, so one'll need that
 installed. It can be installed on mac simply by the following command
-
+#+BEGIN_SRC sh
 pip install pandas
+#+END_SRC
 
 After the above, fire up an instance of the python repl and verify that
 pandas is importable by trying the following:
@@ -41,6 +46,9 @@ Pandas has a bunch of nice abstractions that help with that. Enter
 Dataframes, which essentially represent some tabular data. Say we have
 the following bunch of dicts in an array, essentially a list of records
 and we want to create a table out of these.
+
+The data used below is available along with this file. It was obtained
+from the site http://developer.usa.gov/1usagov as a realtime stream.
 
 #+BEGIN_SRC python :session intro
 path = "usagov_data.dat"
@@ -157,16 +165,74 @@ Name: tz, dtype: int64
 
 We can do some munging for filling in missing fields and sanitizing the
 data. "fillna" function can fill in missing (NA) values. Empty strings
-can be filled in by boolean indexing
+can be filled in by boolean indexing in the style of R.
 
 #+BEGIN_SRC python :session intro
+arbit_graph = "graph.png"
+
 clean_tz = frame['tz'].fillna('Missing')
 clean_tz[clean_tz == ''] = 'Unknown'
 tz_counts = clean_tz.value_counts()
 tz_counts[:10]
-tz_counts[:10].plot(kind='barh', rot=0)
-# TODO: Generate and save the plot as a file
+plot = tz_counts[:10].plot(kind='barh', rot=0)
+plot.get_figure().savefig(arbit_graph)
+arbit_graph
 #+END_SRC
 
 #+RESULTS:
-: Axes(0.125,0.1;0.775x0.8)
+
+The field "a" in the above dataframe contains the useragent. We can mess
+around with that a bit by splitting off the first token and checking the
+counts of those.
+
+"dropna" can be used to get rid of the missing fields.
+
+#+BEGIN_SRC python :session intro
+results = Series([x.split()[0] for x in frame.a.dropna()])
+results[:5]
+results.value_counts()[:8]
+#+END_SRC
+
+#+RESULTS:
+: Mozilla/5.0    59
+: Mozilla/4.0     2
+: dtype: int64
+
+Lets now try to decompose the top timezones into Windows and non-Windows
+users. Instead of using a uaparser, lets assume that a Windows UA
+contains that string inside the UA. We get rid of the missing UAs by
+using "notnull"
+
+#+BEGIN_SRC python :session intro
+cframe = frame[frame.a.notnull()]
+os = np.where(cframe['a'].str.contains('Windows'),
+               'Windows', 'Not Windows')
+by_tz_os = cframe.groupby(['tz', os])
+agg_counts = by_tz_os.size().unstack().fillna(0)
+agg_counts
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+                      Not Windows  Windows
+tz
+Africa/Cairo                    0        3
+America/Chicago                 5        4
+America/Indianapolis            1        0
+America/Los_Angeles             1        4
+America/New_York                8        2
+America/Phoenix                 1        0
+America/Puerto_Rico             1        0
+Asia/Chongqing                  0        1
+Asia/Istanbul                   1        0
+Asia/Kuala_Lumpur               6        0
+Asia/Seoul                      0        1
+Asia/Singapore                  2        1
+Europe/Berlin                   4        1
+Europe/London                   1        2
+Europe/Paris                    1        0
+Europe/Prague                   1        0
+Europe/Rome                     1        0
+#+end_example
+
+Next,
