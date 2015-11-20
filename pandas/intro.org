@@ -5,7 +5,7 @@
 
 Pandas is a tool for working with data effectively within Python. This
 file is an Introduction to the library. Basically I am updating this as
-I learn along. This is a org-mode doc with org-babel. Hence, it can be
+I learn along. This is an org-mode doc with org-babel. Hence, it can be
 executed within emacs. If you check out the raw file, it should contain
 the results of most of the source block executions.
 
@@ -41,16 +41,16 @@ on how to get something done instead of actually getting it done.
 
 * Usage
 ** Dataframes
-
 Pandas has a bunch of nice abstractions that help with that. Enter
 Dataframes, which essentially represent some tabular data. Say we have
 the following bunch of dicts in an array, essentially a list of records
 and we want to create a table out of these.
 
+*** US Gov URL Shortening Data
 The data used below is available along with this file. It was obtained
 from the site http://developer.usa.gov/1usagov as a realtime stream.
 
-#+BEGIN_SRC python :session intro
+#+BEGIN_SRC ipython :session intro
 path = "usagov_data.dat"
 
 import json
@@ -61,14 +61,15 @@ from pandas import DataFrame, Series
 import pandas as pd; import numpy as np
 
 frame = DataFrame(records)
-frame
+frame.size
 #+END_SRC
 
 #+RESULTS:
+: 1342
 
 We can now access the elements as following:
 
-#+BEGIN_SRC python :session intro
+#+BEGIN_SRC ipython :session intro
 frame['tz']
 #+END_SRC
 
@@ -143,7 +144,7 @@ objects. When accessing a column from a dataframe, the output is a
 series object. It has a method "value_counts" that gives us the counts
 of the values of the column in sorted order.
 
-#+BEGIN_SRC python :session intro
+#+BEGIN_SRC ipython :session intro
 tz_counts = frame['tz'].value_counts()
 tz_counts[:10]
 #+END_SRC
@@ -167,19 +168,20 @@ We can do some munging for filling in missing fields and sanitizing the
 data. "fillna" function can fill in missing (NA) values. Empty strings
 can be filled in by boolean indexing in the style of R.
 
-#+BEGIN_SRC python :session intro
+#+BEGIN_SRC ipython :session intro :file graph1.png
 arbit_graph = "graph.png"
+def plotify(plot):
+    plot.get_figure().savefig(arbit_graph)
+    return arbit_graph
 
 clean_tz = frame['tz'].fillna('Missing')
 clean_tz[clean_tz == ''] = 'Unknown'
 tz_counts = clean_tz.value_counts()
-tz_counts[:10]
-plot = tz_counts[:10].plot(kind='barh', rot=0)
-plot.get_figure().savefig(arbit_graph)
-arbit_graph
+tz_counts[:10].plot(kind='barh', rot=0)
 #+END_SRC
 
 #+RESULTS:
+[[file:/tmp/image.png]]
 
 The field "a" in the above dataframe contains the useragent. We can mess
 around with that a bit by splitting off the first token and checking the
@@ -187,7 +189,7 @@ counts of those.
 
 "dropna" can be used to get rid of the missing fields.
 
-#+BEGIN_SRC python :session intro
+#+BEGIN_SRC ipython :session intro
 results = Series([x.split()[0] for x in frame.a.dropna()])
 results[:5]
 results.value_counts()[:8]
@@ -203,7 +205,7 @@ users. Instead of using a uaparser, lets assume that a Windows UA
 contains that string inside the UA. We get rid of the missing UAs by
 using "notnull"
 
-#+BEGIN_SRC python :session intro
+#+BEGIN_SRC ipython :session intro
 cframe = frame[frame.a.notnull()]
 os = np.where(cframe['a'].str.contains('Windows'),
                'Windows', 'Not Windows')
@@ -235,4 +237,76 @@ Europe/Prague                   1        0
 Europe/Rome                     1        0
 #+end_example
 
-Next,
+Next, we want to get the overall top timezones with the right split. For
+that, we will construct an indirect index array by summing up the
+Win/NonWin columns and use that to sort the timezones. Based on this
+indexer, we will then select the rows in agg_counts in that order.
+
+#+BEGIN_SRC ipython :session intro
+  indexer = agg_counts.sum(1).argsort()
+  indexer
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+tz
+Africa/Cairo             8
+America/Chicago         14
+America/Indianapolis    10
+America/Los_Angeles     15
+America/New_York         7
+America/Phoenix          6
+America/Puerto_Rico     16
+Asia/Chongqing           2
+Asia/Istanbul            5
+Asia/Kuala_Lumpur       11
+Asia/Seoul              13
+Asia/Singapore           0
+Europe/Berlin            3
+Europe/London           12
+Europe/Paris             9
+Europe/Prague            1
+Europe/Rome              4
+dtype: int64
+#+end_example
+
+#+BEGIN_SRC ipython :session intro
+  count_subset = agg_counts.take(indexer)[:10]
+  count_subset
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+                      Not Windows  Windows
+tz
+Asia/Istanbul                   1        0
+Europe/Paris                    1        0
+Asia/Seoul                      0        1
+Europe/Prague                   1        0
+Asia/Chongqing                  0        1
+America/Puerto_Rico             1        0
+Europe/Rome                     1        0
+America/Indianapolis            1        0
+America/Phoenix                 1        0
+Asia/Singapore                  2        1
+#+end_example
+
+Then, we can plot the preceding code block in a stacked bar plot.
+
+#+BEGIN_SRC ipython :session intro :file graph2.png
+count_subset.plot(kind="barh", stacked=True)
+#+END_SRC
+
+#+RESULTS:
+[[file:graph.png]]
+
+This does not make it easy to see the relative percentage. We can do
+better by normalizing to 1 and then plotting.
+
+#+BEGIN_SRC ipython :session intro :file graph3.png
+normed_subset = count_subset.div(count_subset.sum(1), axis=0)
+normed_subset.plot(kind="barh", stacked=True)
+#+END_SRC
+
+#+RESULTS:
+[[file:graph3.png]]
